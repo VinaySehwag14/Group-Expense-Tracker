@@ -1,15 +1,15 @@
+import { Outlet } from "react-router-dom";
 import Footer from "./components/shared/Footer";
 import Header from "./components/shared/Header";
-import Home from "./pages/Home";
 
-function App() {
+const Layout = () => {
   return (
     <>
       <Header />
-      <Home />
+      <Outlet />
       <Footer />
     </>
   );
-}
+};
 
-export default App;
+export default Layout;
