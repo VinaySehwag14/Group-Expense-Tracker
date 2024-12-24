@@ -1,118 +1,165 @@
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
-interface Contact {
+interface Group {
   id: string;
   name: string;
-  phone: string;
+  members: [];
 }
 
 interface GroupFormValues {
   groupName: string;
-  selectedContacts: string[];
 }
 
 const CreateGroup = () => {
   const { handleSubmit, control, reset } = useForm<GroupFormValues>({
     defaultValues: {
       groupName: "",
-      selectedContacts: [],
     },
   });
 
-  const contacts: Contact[] = [
-    { id: "1", name: "John Doe", phone: "1234567890" },
-    { id: "2", name: "Jane Smith", phone: "0987654321" },
-  ];
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [popupOpen, setPopupOpen] = useState(false);
+  const [currentGroupLink, setCurrentGroupLink] = useState("");
 
   const onSubmit = (data: GroupFormValues) => {
-    const selectedContacts = contacts.filter((contact) =>
-      data.selectedContacts.includes(contact.id)
-    );
-
-    const newGroup = {
+    const newGroup: Group = {
       id: crypto.randomUUID(),
       name: data.groupName,
-      members: selectedContacts,
+      members: [],
     };
 
-    console.log("Group Created:", newGroup);
-    alert("Group created successfully!");
+    const updatedGroups = [...groups, newGroup];
+    setGroups(updatedGroups);
 
-    // Reset form
+    // Save to localStorage
+    localStorage.setItem("groups", JSON.stringify(updatedGroups));
+
+    // Generate Group Link
+    const groupLink = `${window.location.origin}/join/${newGroup.id}`;
+    setCurrentGroupLink(groupLink);
+
+    // Open Confirmation Popup
+    setPopupOpen(true);
+
     reset();
   };
 
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(currentGroupLink);
+    alert("Group link copied to clipboard!");
+  };
+
   return (
-    <form
-      onSubmit={handleSubmit(onSubmit)}
-      className="p-4 max-w-md mx-auto bg-white rounded shadow"
-    >
-      <h2 className="text-xl font-bold mb-4">Create a New Group</h2>
+    <div className="p-6 max-w-2xl mx-auto bg-gray-100 rounded-lg shadow-lg">
+      <h2 className="text-2xl font-semibold mb-6 text-gray-800">
+        Create a New Group
+      </h2>
 
-      {/* Group Name Field */}
-      <Controller
-        name="groupName"
-        control={control}
-        rules={{ required: "Group name is required" }}
-        render={({ field, fieldState }) => (
-          <div className="mb-4">
-            <input
-              {...field}
-              type="text"
-              placeholder="Group Name"
-              className={`w-full p-2 border ${
-                fieldState.error ? "border-red-500" : "border-gray-300"
-              } rounded`}
-            />
-            {fieldState.error && (
-              <p className="text-red-500 text-sm">{fieldState.error.message}</p>
-            )}
-          </div>
-        )}
-      />
-
-      {/* Select Members Field */}
-      <Controller
-        name="selectedContacts"
-        control={control}
-        rules={{
-          validate: (value) =>
-            value.length > 0 || "Please select at least one contact",
-        }}
-        render={({ field, fieldState }) => (
-          <div>
-            <h3 className="mb-2">Select Members:</h3>
-            {contacts.map((contact) => (
-              <label key={contact.id} className="block mb-1">
-                <input
-                  type="checkbox"
-                  value={contact.id}
-                  checked={field.value.includes(contact.id)}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    const updatedSelection = checked
-                      ? [...field.value, contact.id]
-                      : field.value.filter((id) => id !== contact.id);
-                    field.onChange(updatedSelection);
-                  }}
-                />
-                <span className="ml-2">{contact.name}</span>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Group Name Field */}
+        <Controller
+          name="groupName"
+          control={control}
+          rules={{ required: "Group name is required" }}
+          render={({ field, fieldState }) => (
+            <div>
+              <label className="block text-gray-700 font-medium mb-2">
+                Group Name
               </label>
-            ))}
-            {fieldState.error && (
-              <p className="text-red-500 text-sm">{fieldState.error.message}</p>
-            )}
-          </div>
-        )}
-      />
+              <input
+                {...field}
+                type="text"
+                placeholder="Enter group name"
+                className={`w-full p-3 border ${
+                  fieldState.error ? "border-red-500" : "border-gray-300"
+                } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
+              />
+              {fieldState.error && (
+                <p className="text-red-500 text-sm mt-1">
+                  {fieldState.error.message}
+                </p>
+              )}
+            </div>
+          )}
+        />
 
-      <button
-        type="submit"
-        className="bg-blue-500 text-white px-4 py-2 mt-4 rounded"
-      >
-        Create Group
-      </button>
-    </form>
+        <button
+          type="submit"
+          className="w-full bg-blue-500 text-white py-3 rounded-lg font-medium text-lg hover:bg-blue-600 transition duration-200"
+        >
+          Create Group
+        </button>
+      </form>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={popupOpen} onOpenChange={setPopupOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Group Created Successfully!</DialogTitle>
+            <DialogDescription>
+              Share the group link with others to add members.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="bg-gray-100 p-4 rounded-md flex items-center justify-between mb-4">
+            <span className="text-gray-700">{currentGroupLink}</span>
+            <Button variant="outline" onClick={handleCopyLink}>
+              Copy Link
+            </Button>
+          </div>
+
+          <div className="flex space-x-4">
+            {/* Social Media Sharing */}
+            <a
+              href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+                currentGroupLink
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-blue-700 text-white px-4 py-2 rounded-md hover:bg-blue-800"
+            >
+              Share on Facebook
+            </a>
+            <a
+              href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(
+                currentGroupLink
+              )}&text=Join+my+group!`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-blue-400 text-white px-4 py-2 rounded-md hover:bg-blue-500"
+            >
+              Share on Twitter
+            </a>
+            <a
+              href={`https://wa.me/?text=${encodeURIComponent(
+                "Join my group: " + currentGroupLink
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
+            >
+              Share on WhatsApp
+            </a>
+          </div>
+
+          <DialogFooter>
+            <Button variant="default" onClick={() => setPopupOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 
